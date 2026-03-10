@@ -1,0 +1,23 @@
+---
+- name: Prepare
+  hosts: all
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install basic dependencies
+      ansible.builtin.apt:
+        name:
+          - python3
+          - python3-pip
+          - sudo
+          - curl
+          - gnupg
+          - git
+          - jq
+        state: present

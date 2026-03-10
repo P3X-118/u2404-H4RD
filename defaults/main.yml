@@ -525,3 +525,43 @@ ubtu24stig_audit_tools:
   - /sbin/auditd
   - /sbin/audispd-zos-remote
   - /sbin/augenrules
+
+#############
+### Cloud-Init ###
+#############
+
+# Install cloud-init package
+ubtu24stig_install_cloud_init: true
+
+# Cloud-init datasource (nocloud, ec2, azure, gce)
+cloud_init_datasource: nocloud
+
+# Default user configuration
+cloud_init_default_user: ubuntu
+cloud_init_allow_password_ssh: true
+
+# Cloud-init hostname
+cloud_init_hostname: "{{ ansible_facts.hostname }}"
+
+# Instance ID for meta-data
+cloud_init_instance_id: "{{ ansible_facts.date_time.epoch }}"
+
+# Locale and keyboard
+cloud_init_locale: en_US.UTF-8
+cloud_init_keyboard_layout: us
+
+# Storage layout for autoinstall
+cloud_init_storage_layout: lvm
+
+# Packages to install during cloud-init
+# cloud_init_packages:
+#   - vim
+#   - curl
+
+# SSH keys (add your public keys here)
+# cloud_init_ssh_keys:
+#   - ssh-rsa AAAA...
+
+# Commands to run after installation
+# cloud_init_runcmd:
+#   - systemctl restart sshd

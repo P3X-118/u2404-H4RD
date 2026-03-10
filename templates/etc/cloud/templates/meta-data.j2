@@ -1,0 +1,2 @@
+instance-id: {{ cloud_init_instance_id | default(ansible_facts.date_time.epoch) }}
+local-hostname: {{ cloud_init_hostname }}

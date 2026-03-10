@@ -1,0 +1,17 @@
+datasource_list:
+  - {{ cloud_init_datasource | default('nocloud') }}
+
+datasource:
+  NoCloud:
+    seedfrom: /seed/
+    fs_label: cloudimg
+  EC2:
+    metadata_urls:
+      - http://169.254.169.254/latest/meta-data/
+    userdata_urls:
+      - http://169.254.169.254/latest/user-data/
+  Azure:
+    agent_command: waagent
+  GCE:
+    metadata_urls:
+      - http://metadata.google.internal/computeMetadata/v1/

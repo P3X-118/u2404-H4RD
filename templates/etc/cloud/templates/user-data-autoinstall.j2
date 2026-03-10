@@ -1,0 +1,24 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: {{ cloud_init_locale | default('en_US.UTF-8') }}
+  keyboard:
+    layout: {{ cloud_init_keyboard_layout | default('us') }}
+  identity:
+    hostname: {{ cloud_init_hostname | default('ubuntu') }}
+    password: "{{ cloud_init_default_password | default('$6$rounds=4096$randomsalt$hashedpassword') }}"
+    username: {{ cloud_init_default_user | default('ubuntu') }}
+  ssh:
+    install-server: true
+    allow-pw: {{ cloud_init_allow_password_ssh | default(true) }}
+    {{ '#' }}ssh-authorized-keys:
+    {{ '#' }}  - ssh-rsa AAAA...
+  storage:
+    layout:
+      name: {{ cloud_init_storage_layout | default('lvm') }}
+  packages:
+    - {{ cloud_init_packages | join('\n    - ') if cloud_init_packages is defined else '' }}
+  late-commands:
+    {% for cmd in cloud_init_late_commands | default([]) %}
+    - {{ cmd }}
+    {% endfor %}

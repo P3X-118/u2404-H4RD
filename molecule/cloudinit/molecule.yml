@@ -1,0 +1,39 @@
+---
+driver:
+  name: docker
+
+platforms:
+  - name: instance
+    image: ubuntu:24.04
+    command: /bin/sleep infinity
+    tty: true
+    privileged: true
+    security_opts:
+      - seccomp=unconfined
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - ${MOLECULE_PROJECT_DIRECTORY}/molecule/results:/opt/audit_results:rw
+    pre_build_image: true
+
+provisioner:
+  name: ansible
+  inventory:
+    hosts:
+      instance:
+        ansible_host: instance
+        ansible_connection: docker
+  config_options:
+    defaults:
+      interpreter_python: auto_silent
+      callbacks_enabled: profile_tasks, timer
+    privilege_escalation:
+      become: true
+      become_method: sudo
+      become_user: root
+      become_ask_pass: false
+
+verifier:
+  name: ansible
+
+scenario:
+  name: cloudinit

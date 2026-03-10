@@ -29,6 +29,27 @@
   ansible.builtin.package:
     cache_valid_time: 7200
 
+- name: "PRELIM | Install cloud-init"
+  when: ubtu24stig_install_cloud_init | default(true)
+  tags: always
+  ansible.builtin.package:
+    name: cloud-init
+    state: present
+
+- name: "PRELIM | Configure cloud-init datasources"
+  when:
+    - ubtu24stig_install_cloud_init | default(true)
+    - cloud_init_datasource | default('nocloud') == 'nocloud'
+  tags: always
+  block:
+    - name: "PRELIM | Create cloud-init datasource config"
+      ansible.builtin.template:
+        src: etc/cloud/cloud.cfg.d/99_datasource.cfg.j2
+        dest: /etc/cloud/cloud.cfg.d/99_datasource.cfg
+        mode: '0644'
+        owner: root
+        group: root
+
 - name: "PRELIM | Include audit specific variables"
   when:
     - run_audit or audit_only

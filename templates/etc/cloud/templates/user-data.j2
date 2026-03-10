@@ -1,0 +1,31 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: {{ cloud_init_locale | default('en_US.UTF-8') }}
+  keyboard:
+    layout: {{ cloud_init_keyboard_layout | default('us') }}
+  identity:
+    hostname: {{ cloud_init_hostname }}
+    password: "{{ cloud_init_password }}"
+    username: {{ cloud_init_username }}
+  ssh:
+    install-server: true
+    allow-pw: {{ cloud_init_ssh_password_auth | default(true) }}
+{% if cloud_init_ssh_keys is defined and cloud_init_ssh_keys %}
+  ssh-authorized-keys:
+{% for key in cloud_init_ssh_keys %}
+    - {{ key }}
+{% endfor %}
+{% endif %}
+{% if cloud_init_packages is defined and cloud_init_packages %}
+  packages:
+{% for pkg in cloud_init_packages %}
+    - {{ pkg }}
+{% endfor %}
+{% endif %}
+{% if cloud_init_runcmd is defined and cloud_init_runcmd %}
+  runcmd:
+{% for cmd in cloud_init_runcmd %}
+    - {{ cmd }}
+{% endfor %}
+{% endif %}

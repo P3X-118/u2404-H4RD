@@ -1,0 +1,95 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    skip_reboot: true
+    run_audit: false
+
+  tasks:
+    - name: Verify cloud-init is installed
+      ansible.builtin.package:
+        name: cloud-init
+        state: present
+      check_mode: true
+      register: cloud_init_check
+
+    - name: Verify cloud-init package
+      ansible.builtin.assert:
+        that:
+          - cloud_init_check.changed == false
+        fail_msg: "cloud-init is not installed"
+        success_msg: "cloud-init is installed"
+
+    - name: Check cloud-init config exists
+      ansible.builtin.stat:
+        path: /etc/cloud/cloud.cfg
+      register: cloud_cfg
+
+    - name: Verify cloud-init config exists
+      ansible.builtin.assert:
+        that: cloud_cfg.stat.exists
+        fail_msg: "cloud-init config not found"
+        success_msg: "cloud-init config exists"
+
+    - name: Check cloud-init datasource config
+      ansible.builtin.stat:
+        path: /etc/cloud/cloud.cfg.d/99_datasource.cfg
+      register: datasource_cfg
+
+    - name: Verify cloud-init datasource config
+      ansible.builtin.assert:
+        that: datasource_cfg.stat.exists
+        fail_msg: "cloud-init datasource config not found"
+        success_msg: "cloud-init datasource config exists"
+
+    - name: Check cloud-init is in PATH
+      ansible.builtin.command:
+        cmd: which cloud-init
+      register: cloud_init_path
+      changed_when: false
+      failed_when: cloud_init_path.rc != 0
+
+    - name: Verify cloud-init command available
+      ansible.builtin.debug:
+        msg: "cloud-init found at: {{ cloud_init_path.stdout }}"
+
+    - name: Verify cloud-init version
+      ansible.builtin.command:
+        cmd: cloud-init --version
+      register: cloud_init_version
+      changed_when: false
+      failed_when: cloud_init_version.rc != 0
+
+    - name: Display cloud-init version
+      ansible.builtin.debug:
+        msg: "cloud-init version: {{ cloud_init_version.stdout }}"
+
+    - name: Check /var/lib/cloud/seed exists
+      ansible.builtin.stat:
+        path: /var/lib/cloud/seed
+      register: seed_dir
+
+    - name: Verify seed directory for NoCloud
+      ansible.builtin.debug:
+        msg: "Cloud-init seed directory exists: {{ seed_dir.stat.exists }}"
+
+    - name: Verify essential hardening files exist
+      ansible.builtin.stat:
+        path: /etc/sysctl.d/stig_kernel.conf
+      register: sysctl_conf
+
+    - name: Verify SSH config is present
+      ansible.builtin.stat:
+        path: /etc/ssh/sshd_config
+      register: sshd_conf
+
+    - name: Verify essential files
+      ansible.builtin.assert:
+        that:
+          - sysctl_conf.stat.exists
+          - sshd_conf.stat.exists
+        fail_msg: "Essential configuration files missing"
+        success_msg: "Essential configuration files present"

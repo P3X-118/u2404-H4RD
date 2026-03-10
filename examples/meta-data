@@ -1,2 +1,3 @@
-instance-id: ubuntu-hardened-001
-local-hostname: ubuntu-hardened
+instance-id: ubuntu-harden-001
+local-hostname: ubuntu-harden
+platform: kvm

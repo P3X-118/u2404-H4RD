@@ -28,8 +28,9 @@ log_error() { echo -e "${RED}[ERROR]${NC} $1"; }
 
 cleanup() {
     log_info "Cleaning up..."
-    virsh destroy "$VM_NAME" 2>/dev/null || true
-    virsh undefine "$VM_NAME" --nvram 2>/dev/null || true
+    sudo virsh -c qemu:///system destroy "$VM_NAME" 2>/dev/null || true
+    sudo virsh -c qemu:///system undefine "$VM_NAME" --nvram 2>/dev/null || true
+    sudo rm -f /var/lib/libvirt/images/cloud-init-test.iso
     rm -f cloud-init-test.iso
     log_info "Done"
 }
@@ -79,11 +80,15 @@ create_iso() {
     log_info "Creating cloud-init ISO..."
     
     local seed_dir=$(mktemp -d)
+    local iso_in_tmp="/tmp/cloud-init-test.iso"
     
     cp "$ROLE_DIR/examples/user-data" "$seed_dir/"
     cp "$ROLE_DIR/examples/meta-data" "$seed_dir/"
     
-    genisoimage -output cloud-init-test.iso -volid cidata -rock "$seed_dir/"
+    sudo genisoimage -output "$iso_in_tmp" -volid cidata -rock "$seed_dir/"
+    
+    # Copy to libvirt images directory for access
+    sudo cp "$iso_in_tmp" /var/lib/libvirt/images/cloud-init-test.iso
     
     rm -rf "$seed_dir"
 }
@@ -93,15 +98,16 @@ run_vm() {
     log_info "Starting VM..."
     
     # Clean up any existing
-    virsh destroy "$VM_NAME" 2>/dev/null || true
-    virsh undefine "$VM_NAME" --nvram 2>/dev/null || true
+    sudo virsh -c qemu:///system destroy "$VM_NAME" 2>/dev/null || true
+    sudo virsh -c qemu:///system undefine "$VM_NAME" --nvram 2>/dev/null || true
     
-    virt-install \
+    sudo virt-install \
+        --connect qemu:///system \
         --name "$VM_NAME" \
         --ram "$MEMORY" \
         --vcpus "$CPUS" \
         --disk path="$DISK_PATH,device=disk,bus=virtio" \
-        --disk path="cloud-init-test.iso,device=cdrom" \
+        --disk path="/var/lib/libvirt/images/cloud-init-test.iso,device=cdrom" \
         --os-variant ubuntu24.04 \
         --network network=default,model=virtio \
         --graphics vnc \
@@ -116,7 +122,7 @@ run_vm() {
     
     # Show console
     log_info "Console output:"
-    virsh console "$VM_NAME" --safe || true
+    sudo virsh -c qemu:///system console "$VM_NAME" --safe || true
 }
 
 # Main

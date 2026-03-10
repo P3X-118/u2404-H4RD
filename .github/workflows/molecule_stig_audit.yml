@@ -1,0 +1,67 @@
+---
+
+name: Molecule STIG Audit
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  molecule-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Docker
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install molecule and dependencies
+        run: |
+          pip install --upgrade pip
+          pip install molecule molecule-docker ansible-core pytest pytest-testinfra
+
+      - name: Run molecule test
+        run: |
+          molecule test
+
+      - name: Find latest audit results
+        run: |
+          ls -la molecule/results/
+
+      - name: Generate README update
+        if: success()
+        run: |
+          python3 scripts/update_audit_results.py
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+      - name: Commit and push README changes
+        if: success()
+        run: |
+          git add README.md molecule/results/
+          git diff --staged --stat
+          git commit -m "ci: Update STIG audit results from molecule test" || echo "No changes to commit"
+          git push || echo "No changes to push"
+
+      - name: Upload audit results as artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: stig-audit-results
+          path: molecule/results/
+          retention-days: 30

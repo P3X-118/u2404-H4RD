@@ -1,0 +1,183 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  become: true
+
+  vars:
+    skip_reboot: true
+    run_audit: true
+    setup_audit: true
+    audit_content: git
+    audit_format: json
+    audit_git_version: "benchmark_v1.1.0"
+    get_audit_binary_method: download
+
+  tasks:
+    - name: Check ansible fact directory exists
+      ansible.builtin.file:
+        path: /etc/ansible/facts.d
+        state: directory
+        mode: '0755'
+
+    - name: Gather local facts
+      ansible.builtin.setup:
+        filter: ansible_local
+
+    - name: Verify role variables are set
+      ansible.builtin.assert:
+        that:
+          - benchmark_version | length > 0
+          - benchmark == 'UBUNTU24-STIG'
+        fail_msg: "Role variables not properly configured"
+        success_msg: "Role variables verified"
+
+    - name: Check STIG fact file exists
+      ansible.builtin.stat:
+        path: /etc/ansible/facts.d/stig.fact
+      register: stig_fact
+
+    - name: Verify STIG facts were created
+      ansible.builtin.assert:
+        that: stig_fact.stat.exists
+        fail_msg: "STIG fact file not found"
+        success_msg: "STIG fact file exists"
+
+    - name: Verify sysctl config file exists
+      ansible.builtin.stat:
+        path: /etc/sysctl.d/stig_kernel.conf
+      register: sysctl_conf
+
+    - name: Verify SSH config is present
+      ansible.builtin.stat:
+        path: /etc/ssh/sshd_config
+      register: sshd_conf
+
+    - name: Verify essential files
+      ansible.builtin.assert:
+        that:
+          - sysctl_conf.stat.exists
+          - sshd_conf.stat.exists
+        fail_msg: "Essential configuration files missing"
+        success_msg: "Essential configuration files present"
+
+    - name: Ensure audit directories exist
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: 'go-w'
+      loop:
+        - /opt
+        - /opt/UBUNTU24-STIG-Audit
+        - /usr/local/bin
+        - /opt/audit_results
+
+    - name: Install git
+      ansible.builtin.package:
+        name: git
+        state: present
+
+    - name: Clone STIG audit repository
+      ansible.builtin.git:
+        repo: "https://github.com/ansible-lockdown/UBUNTU24-STIG-Audit.git"
+        dest: "/opt/UBUNTU24-STIG-Audit"
+        version: "benchmark_v1.1.0"
+        depth: 1
+
+    - name: Download Goss binary
+      when: get_audit_binary_method == 'download'
+      block:
+        - name: Get Goss version info
+          ansible.builtin.uri:
+            url: "https://api.github.com/repos/goss-org/goss/releases/latest"
+            return_content: true
+          register: goss_release
+          changed_when: false
+
+        - name: Set goss release fact
+          ansible.builtin.set_fact:
+            goss_version: "{{ goss_release.json.tag_name }}"
+            goss_checksum: "{{ goss_release.json.assets | selectattr('name', 'contains', 'linux-amd64') | map(attribute='browser_download_url') | first }}"
+
+        - name: Download Goss
+          ansible.builtin.get_url:
+            url: "https://github.com/goss-org/goss/releases/download/{{ goss_version }}/goss-linux-amd64"
+            dest: /usr/local/bin/goss
+            mode: '0755'
+          when: goss_version is defined
+
+    - name: Create audit vars file
+      ansible.builtin.copy:
+        content: |
+          # Audit variables for STIG compliance check
+          benchmark_version: 'v1.1.0'
+          benchmark: UBUNTU24-STIG
+          
+          # Control settings - match role defaults
+          ubtu24stig_cat1: true
+          ubtu24stig_cat2: true
+          ubtu24stig_cat3: true
+          
+          # Disable rules not applicable in container/test
+          ubtu24stig_102000: false
+          ubtu24stig_100030: false
+          ubtu24stig_100040: false
+          
+          # System info
+          ansible_python_interpreter: /usr/bin/python3
+        dest: "/opt/UBUNTU24-STIG-Audit/vars/{{ ansible_facts.hostname }}.yml"
+        mode: '0644'
+
+    - name: Run STIG compliance audit
+      ansible.builtin.command:
+        cmd: "/opt/UBUNTU24-STIG-Audit/run_audit.sh -v /opt/UBUNTU24-STIG-Audit/vars/{{ ansible_facts.hostname }}.yml -f json -o /opt/{{ ansible_facts.hostname }}-UBUNTU24-STIG-post_scan.{{ ansible_facts.date_time.epoch }}.json"
+      environment:
+        AUDIT_BIN: /usr/local/bin/goss
+        AUDIT_CONTENT_LOCATION: /opt
+        AUDIT_FILE: goss.yml
+      register: audit_result
+      changed_when: true
+      failed_when: false
+
+    - name: Copy audit results to shared volume
+      ansible.builtin.copy:
+        src: "/opt/{{ ansible_facts.hostname }}-UBUNTU24-STIG-post_scan.*.json"
+        dest: /opt/audit_results/
+        mode: '0644'
+      ignore_errors: true
+      register: audit_copy
+
+    - name: Create latest symlink
+      ansible.builtin.shell:
+        cmd: |
+          cd /opt/audit_results
+          latest=$(ls -t *-UBUNTU24-STIG-post_scan_*.json 2>/dev/null | head -1)
+          if [ -n "$latest" ]; then
+            rm -f latest.json
+            ln -s "$latest" latest.json
+          fi
+      changed_when: true
+      ignore_errors: true
+
+    - name: Display audit results
+      block:
+        - name: Read audit output
+          ansible.builtin.shell:
+            cmd: "cat /opt/{{ ansible_facts.hostname }}-UBUNTU24-STIG-post_scan.*.json 2>/dev/null | head -100"
+          register: audit_output
+          changed_when: false
+          ignore_errors: true
+
+        - name: Show audit summary
+          ansible.builtin.debug:
+            msg: |
+              ================================================
+              STIG COMPLIANCE AUDIT RESULTS
+              ================================================
+              {{ audit_output.stdout }}
+
+        - name: Show audit file location
+          ansible.builtin.debug:
+            msg: "Full audit report: /opt/{{ ansible_facts.hostname }}-UBUNTU24-STIG-post_scan.*.json"
+
+      when: audit_result.rc is defined

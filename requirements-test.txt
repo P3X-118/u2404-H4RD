@@ -1,0 +1,5 @@
+molecule
+molecule-docker
+ansible-core>=2.12
+pytest
+pytest-testinfra

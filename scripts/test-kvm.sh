@@ -123,12 +123,27 @@ create_iso() {
 run_vm() {
     log_info "Starting VM..."
     
+    # Option 1: NAT network (works reliably)
+    # - Host CAN reach VM
+    # - VM can reach internet via NAT
+    #
+    # Option 2: macvlan network (requires proper network infrastructure)
+    # - Host CANNOT reach VM (isolated)
+    # - VM gets IP from physical network DHCP
+    # - Requires: VEPA-capable switch OR host bridge with hairpin mode
+    #
+    # To use macvlan, ensure:
+    # 1. macvlan20 interface exists: ip link add link eno1 name macvlan20 type macvlan mode bridge
+    # 2. Libvirt network macvlan20 is defined
+    # 3. Use: --network network=macvlan20,model=virtio
+    
+    # For now, use NAT network for reliable testing
+    # Change to macvlan20 when network infrastructure supports it
+    
     sudo virsh -c qemu:///system destroy "$VM_NAME" 2>/dev/null || true
     sudo virsh -c qemu:///system undefine "$VM_NAME" --nvram 2>/dev/null || true
     
-    # VNC on 0.0.0.0 for remote access
     # Using default NAT network for reliable testing
-    # For macvtap (host-isolated), use: --network type=direct,source=eno1,source_mode=bridge,model=virtio
     sudo virt-install \
         --connect qemu:///system \
         --name "$VM_NAME" \

@@ -38,12 +38,11 @@
         content: |
           #cloud-config
           users:
-            - name: ubuntu
-              primary_group: ubuntu
+            - name: ronon
+              primary_group: ronon
               sudo: ALL=(ALL) NOPASSWD:ALL
               shell: /bin/bash
-              ssh_authorized_keys:
-                - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC...
+              password: "$6$QaHca4xL6qvsRVjh$b8ms6YHT8fqOPiMH4AAFpUzG3zQfc9SLd8NPoXWg3ZpQo6l9TrqJdgpklUbDC.QLXLkOvRna2j6SwhVrpSkbg/"
           packages:
             - vim
             - curl

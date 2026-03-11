@@ -6,13 +6,11 @@ autoinstall:
     layout: us
   identity:
     hostname: ubuntu-harden
-    password: "$6$rounds=4096$sgc12345$9F8E7D6C5B4A3E2F1A0B9C8D7E6F5A4B3C2D1E0F9A8B7C6D5E4F3A2B1C0D9E8F7A6B5C4D3E2F1A0B9C8D7E6F5A4"
-    username: admin
+    password: "$6$dV1ROh2x0a2dNiNN$5Ncyu/eETQpxHSg2/8dK1njnuaDxToGYKSceH6QFa2JY1bT0Vd8XfEYlUYR.giREtuiiwops3WnBB6zIESQKs0"
+    username: ronon
   ssh:
     install-server: true
-    allow-pw: false
-    authorized-keys:
-      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC+user@host
+    allow-pw: true
   storage:
     layout:
       name: lvm
@@ -27,4 +25,4 @@ autoinstall:
     package_update: true
     package_upgrade: true
   late-commands:
-    - echo 'admin ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/admin
+    - echo 'ronon ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/ronon

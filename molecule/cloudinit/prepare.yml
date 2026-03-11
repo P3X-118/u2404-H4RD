@@ -37,12 +37,17 @@
       ansible.builtin.copy:
         content: |
           #cloud-config
+          ssh_pwauth: true
           users:
             - name: ronon
               primary_group: ronon
+              groups: sudo
               sudo: ALL=(ALL) NOPASSWD:ALL
               shell: /bin/bash
+              lock_passwd: false
               password: "$6$QaHca4xL6qvsRVjh$b8ms6YHT8fqOPiMH4AAFpUzG3zQfc9SLd8NPoXWg3ZpQo6l9TrqJdgpklUbDC.QLXLkOvRna2j6SwhVrpSkbg/"
+              ssh_authorized_keys:
+                - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBCwqtId82CDe7yxOpF29R2Tem2T4jSbduLoL4JhZf+a
           packages:
             - vim
             - curl

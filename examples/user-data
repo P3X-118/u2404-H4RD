@@ -1,28 +1,30 @@
 #cloud-config
-autoinstall:
-  version: 1
-  locale: en_US.UTF-8
-  keyboard:
-    layout: us
-  identity:
-    hostname: ubuntu-harden
-    password: "$6$dV1ROh2x0a2dNiNN$5Ncyu/eETQpxHSg2/8dK1njnuaDxToGYKSceH6QFa2JY1bT0Vd8XfEYlUYR.giREtuiiwops3WnBB6zIESQKs0"
-    username: ronon
-  ssh:
-    install-server: true
-    allow-pw: true
-  storage:
-    layout:
-      name: lvm
-  packages:
-    - vim
-    - curl
-    - wget
-    - git
-    - htop
-    - net-tools
-  user-data:
-    package_update: true
-    package_upgrade: true
-  late-commands:
-    - echo 'ronon ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/ronon
+ssh_pwauth: true
+disable_root: false
+
+users:
+  - name: ronon
+    primary_group: ronon
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    lock_passwd: false
+    passwd: "$6$dV1ROh2x0a2dNiNN$5Ncyu/eETQpxHSg2/8dK1njnuaDxToGYKSceH6QFa2JY1bT0Vd8XfEYlUYR.giREtuiiwops3WnBB6zIESQKs0"
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBCwqtId82CDe7yxOpF29R2Tem2T4jSbduLoL4JhZf+a
+
+packages:
+  - vim
+  - curl
+  - wget
+  - git
+  - htop
+  - net-tools
+
+package_update: true
+package_upgrade: true
+
+runcmd:
+  - echo 'ronon ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/ronon
+  - sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+  - systemctl restart sshd

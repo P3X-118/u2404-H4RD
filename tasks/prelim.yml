@@ -52,7 +52,7 @@
 
 - name: "PRELIM | Include audit specific variables"
   when:
-    - run_audit|bool or audit_only|bool
+    - "(run_audit|bool) or (audit_only|bool)"
     - setup_audit|bool
   tags: always
   ansible.builtin.include_vars:
@@ -60,7 +60,7 @@
 
 - name: "PRELIM | Include pre-remediation audit tasks"
   when:
-    - run_audit|bool or audit_only|bool
+    - "(run_audit|bool) or (audit_only|bool)"
     - setup_audit|bool
   tags: always
   ansible.builtin.import_tasks:

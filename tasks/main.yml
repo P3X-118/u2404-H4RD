@@ -38,7 +38,7 @@
   when:
     - ansible_env.SUDO_USER is defined
     - not system_is_ec2
-    - not audit_only
+    - not audit_only|bool
   block:
     - name: "Capture current password state of connecting user"
       ansible.builtin.shell: "grep {{ ansible_env.SUDO_USER }} /etc/shadow | awk -F: '{print $2}'"
@@ -63,7 +63,7 @@
     - not system_is_container
     - ubtu24stig_102000
     - ubtu24stig_set_bootloader_password
-    - not audit_only
+    - not audit_only|bool
   ansible.builtin.assert:
     that: ubtu24stig_bootloader_password_hash != 'grub.pbkdf2.sha512.changethispassword'  # pragma: allowlist secret
     msg: "This role will not be able to run single user password commands as ubtu24stig_bootloader_password_hash variable has not been set"  # pragma: allowlist secret
@@ -111,7 +111,7 @@
     file: auditd.yml
 
 - name: "Flush handlers"
-  when: not audit_only
+  when: not audit_only|bool
   ansible.builtin.meta: flush_handlers
 
 - name: "Reboot system"
